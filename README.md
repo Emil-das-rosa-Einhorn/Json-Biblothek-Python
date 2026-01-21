@@ -39,6 +39,9 @@ MAIN FUNCTIONS
       - Print=True/None: Enables/disables terminal output
       - set_reset=True/None: Enables/disables the ability to set reset points.
 
+2. filename(filename) [X]
+   - Sets the name of the config file.
+
 2. setreset(set_reset=TrueNone) [X]
    - Sets a reset point by creating a .reset backup of the current config file.
       - set_reset=True/None: Enables/disables the ability to set reset points.

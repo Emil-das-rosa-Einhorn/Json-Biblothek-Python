@@ -2,7 +2,9 @@ import json
 import os
 import shutil
 
-pfad = os.path.join(os.path.dirname(__file__), 'config.json')
+file_Name = 'config.json'
+
+pfad = os.path.join(os.path.dirname(__file__), file_Name)
 backup_pfad = pfad + ".bak"
 reset_pfad = pfad + ".reset"
 
@@ -13,11 +15,41 @@ config_autoLoad = False
 config_check = False
 passed = True
 
-ignore = ["load", "dump", "show", "json", "os", "editor", "edit", "info", 
-          "pfad", "Print", "ignore", "search", "add", "addlist", "delete",
-          "backup", "get", "libconfig","config_autoCreate", "config_Print", 
-          "config_set_reset", "reset_pfad", "setreset", "validate", "config_check",
-          "config_autoLoad", "passed"]
+konflikte = []
+
+ignore = {
+    # --- 1. Python Built-ins (Systemfunktionen) ---
+    'abs', 'bool', 'dict', 'dir', 'eval', 'exec', 'exit', 'float', 'globals', 
+    'help', 'id', 'input', 'int', 'len', 'list', 'locals', 'max', 'min', 
+    'open', 'print', 'quit', 'range', 'set', 'str', 'sum', 'type', 'vars',
+
+    # --- 2. Importierte Module & Bibliotheken ---
+    'json', 'math', 'os', 'portalocker', 'shutil', 'sqlite3', 'sys', 'time', 'zmq',
+
+    # --- 3. Deine Bibliotheks-Funktionen & Variablen ---
+    'add', 'addlist', 'backup', 'backup_pfad', 'config_autoCreate', 'config_autoLoad', 
+    'config_check', 'config_Print', 'config_set_reset', 'delete', 'dump', 'edit', 
+    'editor', 'file_Name', 'filename', 'get', 'ignore', 'info', 'konflikte', 'libconfig', 
+    'load', 'passed', 'pfad', 'Print', 'reset_pfad', 'scan_keys', 'search', 'setreset', 
+    'show', 'validate',
+
+    # --- 4. Python Interne Namen (Dunder-Methods) ---
+    '__annotations__', '__builtins__', '__cached__', '__doc__', '__file__', 
+    '__loader__', '__name__', '__package__', '__spec__'
+}
+
+def scan_keys():
+    try:
+        with open(pfad, 'r', encoding='utf-8') as f:
+            _daten = json.load(f)
+
+    except (json.JSONDecodeError, ValueError):
+        return False
+    
+    for key in _daten.keys():
+        if key in ignore:
+            konflikte.append(key)
+            print(f"[WARNING] Key conflict detected: '{key}' is a reserved keyword and cannot be used as a variable name.")
 
 def libconfig (check=None,autoLoad=None,autoCreate=None,Print=None,set_reset=None):
 
@@ -78,6 +110,16 @@ def libconfig (check=None,autoLoad=None,autoCreate=None,Print=None,set_reset=Non
         
     return passed
 
+def filename(filename):
+    global pfad, backup_pfad, reset_pfad
+    pfad = os.path.join(os.path.dirname(__file__), filename)
+    backup_pfad = pfad + ".bak"
+    reset_pfad = pfad + ".reset"
+    if os.path.exists(pfad):
+        return True
+    else:
+        return False
+
 def info():
     
     header = """
@@ -103,14 +145,17 @@ def info():
         - Print=True/None: Enables/disables terminal output
         - set_reset=True/None: Enables/disables the ability to set reset points.
 
-    2. setreset(set_reset=TrueNone) [X]
+    2. filename(filename)
+       Sets the name of the config file.
+
+    3. setreset(set_reset=TrueNone) [X]
        Sets a reset point by creating a .reset backup of the current config file.
          - set_reset=True/None: Enables/disables the ability to set reset points.
     
-    3. reset() [X]
+    4. reset() [X]
        Restores the config file from the .reset backup.
     
-    4. load(autoCreate=True/None) [X]
+    5. load(autoCreate=True/None) [X]
        Loads JSON data into global memory.
        - autoCreate=True: Creates a base config if none exists 
          or restors it form the Backup.
@@ -118,43 +163,43 @@ def info():
        - Should the config file be corrupted, the function 
          attempts to restore the file from the backup.
 
-    5. show(Print=True/None)
+    6. show(Print=True/None)
        Returns all loaded variable names as a list.
        If set to 'True', output is displayed in the terminal.
 
-    6. editor()
+    7. editor()
        Interactive terminal menu for changing values.
        - '/?' shows all keys | 'exit' terminates the mode.
 
-    7. edit(Var, Val) [X]
+    8. edit(Var, Val) [X]
        Changes an EXISTING value directly via code. 
 
-    8. dump(dict) [X]
+    9. dump(dict) [X]
        Updates EXISTING values in the JSON. 
        Prevents accidental creation of new keys.
 
-    9. add(Varname, Varvalue) [X]
+    10. add(Varname, Varvalue) [X]
        Creates a NEW data point in the JSON file.
 
-    10. addlist(dict) [X]
+    11. addlist(dict) [X]
        Adds multiple NEW data points simultaneously.
        Example: j.addlist({"D1": 10, "D2": 20})
 
-    11. search(Varname) [X]
+    12. search(Varname) [X]
        Checks if a variable exists in the config (True/False).
 
-    12. delete(name) [X]
+    13. delete(name) [X]
        Permanently deletes a data point from the file and memory.
 
-    13. backup() [X]
+    14. backup() [X]
         Creates a backup/current state of the config file (Config.json.bak)
 
-    14. get(Var, DefaultValue)
+    15. get(Var, DefaultValue)
         Secure data access.
         - I = jsonBib.get("Name", DefaultValue)
         - The DefaultValue (optional) is used if "Name" is not in the config file.
 
-    15. validate(Var, Valmin, Valmax=None) [X]
+    16. validate(Var, Valmin, Valmax=None) [X]
         Validates if a variable meets specified conditions.
         - For numerical values, both minimum and maximum can be set.
         - For boolean or None values, only Valmin is required.
@@ -175,6 +220,7 @@ def backup():
     return False
 
 def load(autoCreate=None):
+    scan_keys()
     if not os.path.exists(pfad):
         if autoCreate or config_autoCreate:
             backup_pfad = pfad + ".bak"
@@ -422,6 +468,10 @@ def search (Varsearch):
         return False
     
 def add(Varname,Varvalue):
+    for a in ignore:
+        if Varname == a:
+            print(f"[ERROR] '{Varname}' is a reserved keyword and cannot be used as a variable name.")
+            return False
     newVardata = {Varname: Varvalue}
     try:
         with open(pfad, 'r', encoding='utf-8') as f:
@@ -440,6 +490,11 @@ def add(Varname,Varvalue):
     return True
 
 def addlist(newVarlist):
+    for a in ignore:
+        if a in newVarlist:
+            print(f"[ERROR] '{a}' is a reserved keyword and cannot be used as a variable name.")
+            return False
+        
     try:
         with open(pfad, 'r', encoding='utf-8') as f:
             daten = json.load(f)
