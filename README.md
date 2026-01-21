@@ -13,6 +13,7 @@ MAIN FEATURES
 * Self-Healing: Automatic repair via .bak files.
 * Editor:       Change values interactively in the terminal.
 * Security:     Automatic backup before every write operation.
+* Reset:        Enable manual snapshots for config recovery.
 * Data Types:   Supports int, float, str, bool, and None.
 
 ------------------------------------------------------------
@@ -20,55 +21,87 @@ INSTALLATION & START
 ------------------------------------------------------------
 1. Copy the file 'JsonBib.py' into your project directory.
 2. Import:       import JsonBib as j
-3. Setup:        j.bibconfig(autoCreate=True, Print=False)
+3. Setup:        j.bibconfig(autoCreate=True/None, Print=True/None, set_reset=True/None)
 4. Load:         j.load()
+5. Info:         j.info()
 
 ------------------------------------------------------------
 MAIN FUNCTIONS
 ------------------------------------------------------------
+[Functions marked with [X] return 'True' if executed 
+    successfully and 'False' upon failure]
 
-[X] = Returns True/False for success status.
+1. libconfig(autoCreate=True/None, Print=True/None, set_reset=True/None)
+   Configures the library settings.
+   - autoCreate=True/None: Enables/disables automatic creation of a base config if none exists.
+   - Print=True/None: Enables/disables terminal output
+   - set_reset=True/None: Enables/disables the ability to set reset points.
 
-1. j.get(Name, DefaultValue)
-     - Secure access. Returns the DefaultValue if the
-     - Name is missing in the config.
+2. setreset(set_reset=TrueNone) [X]
+   Sets a reset point by creating a .reset backup of the current config file.
+   - set_reset=True/None: Enables/disables the ability to set reset points.
+    
+3. reset() [X]
+   Restores the config file from the .reset backup.
+    
+4. load(autoCreate=True/None) [X]
+   Loads JSON data into global memory.
+   - autoCreate=True: Creates a base config if none exists 
+   or restors it form the Backup.
+   If the argument is omitted, no config file is created.
+   - Should the config file be corrupted, the function 
+   attempts to restore the file from the backup.
 
-2. j.edit(Variable, Value) [X]
-     - Changes an existing value in memory and the file.
+5. show(Print=True/None)
+   Returns all loaded variable names as a list.
+   If set to 'True', output is displayed in the terminal.
 
-3. j.editor()
-     - Opens the interactive menu. 
-     - Editor commands: '/?' (Show list), 'exit' (Quit).
+6. editor()
+   Interactive terminal menu for changing values.
+   - '/?' shows all keys | 'exit' terminates the mode.
 
-4. j.add(Name, Value) [X]
-     - Creates a completely new data point.
+7. edit(Var, Val) [X]
+   Changes an EXISTING value directly via code. 
 
-5. addlist(dict) [X]
-   - Adds multiple NEW data points simultaneously.
-   - Example: j.addlist({"D1": 10, "D2": 20})
+8. dump(dict) [X]
+   Updates EXISTING values in the JSON. 
+   Prevents accidental creation of new keys.
 
-6. search(Varname) [X]
-   - Checks if a variable exists in the config (True/False).
+9. add(Varname, Varvalue) [X]
+   Creates a NEW data point in the JSON file.
 
-7. delete(name) [X]
-   - Permanently deletes a data point from the file and memory.
+10. addlist(dict) [X]
+   Adds multiple NEW data points simultaneously.
+   Example: j.addlist({"D1": 10, "D2": 20})
 
-8. backup() [X]
-    - Creates a backup of the config file (Config.json.bak).
+11. search(Varname) [X]
+   Checks if a variable exists in the config (True/False).
 
-9. j.show(Print=True)
-   - Returns a list of all loaded variables.
+12. delete(name) [X]
+   Permanently deletes a data point from the file and memory.
 
-10. j.info()
-   - Displays detailed help directly in the terminal.
+13. backup() [X]
+   Creates a backup/current state of the config file (Config.json.bak)
+
+14. get(Var, DefaultValue)
+   Secure data access.
+   - I = jsonBib.get("Name", DefaultValue)
+   - The DefaultValue (optional) is used if "Name" is not in the config file.
+
+15. validate(Var, Valmin, Valmax=None) [X]
+   Validates if a variable meets specified conditions.
+   - For numerical values, both minimum and maximum can be set.
+   - For boolean or None values, only Valmin is required.
 
 ------------------------------------------------------------
-DATA SECURITY (.bak)
+DATA SECURITY (.bak/.reset)
 ------------------------------------------------------------
 The library automatically creates a 'config.json.bak'.
 Should the main file become corrupted (e.g., due to errors
 during saving), the load() function automatically restores
-the last functional state.
+the last functional state. Additionally, users can manually 
+create a dedicated reset point, allowing for a full Config 
+recovery to a specifically defined state at any time."
 
 ------------------------------------------------------------
 CONTROLS

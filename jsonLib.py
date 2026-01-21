@@ -3,17 +3,22 @@ import os
 import shutil
 
 pfad = os.path.join(os.path.dirname(__file__), 'config.json')
+backup_pfad = pfad + ".bak"
+reset_pfad = pfad + ".reset"
 
 config_autoCreate = False
 config_Print = False
+config_set_reset = False
 
 ignore = ["load", "dump", "show", "json", "os", "editor", "edit", "info", 
           "pfad", "Print", "ignore", "search", "add", "addlist", "delete",
-          "backup", "get", "libconfig","config_autoCreate", "config_Print"]
+          "backup", "get", "libconfig","config_autoCreate", "config_Print", 
+          "config_set_reset", "reset_pfad", "setreset", "validate"]
 
-def libconfig (autoCreate=None,Print=None):
 
-    global config_autoCreate, config_Print
+def libconfig (autoCreate=None,Print=None,set_reset=None):
+
+    global config_autoCreate, config_Print, config_set_reset
 
     if autoCreate is not None:
         config_autoCreate = autoCreate
@@ -24,6 +29,15 @@ def libconfig (autoCreate=None,Print=None):
         config_Print = Print
     else:
         config_Print = False
+
+    if set_reset is not None:
+
+        config_set_reset = set_reset
+
+    else:
+        config_set_reset = False
+
+    setreset()
 
 def info():
     
@@ -42,7 +56,20 @@ def info():
     [Functions marked with [X] return 'True' if executed 
     successfully and 'False' upon failure]
 
-    1. load(autoCreate=True/None) [X]
+    1. libconfig(autoCreate=True/None, Print=True/None, set_reset=True/None)
+       Configures the library settings.
+        - autoCreate=True/None: Enables/disables automatic creation of a base config if none exists.
+        - Print=True/None: Enables/disables terminal output
+        - set_reset=True/None: Enables/disables the ability to set reset points.
+
+    2. setreset(set_reset=TrueNone) [X]
+       Sets a reset point by creating a .reset backup of the current config file.
+         - set_reset=True/None: Enables/disables the ability to set reset points.
+    
+    3. reset() [X]
+       Restores the config file from the .reset backup.
+    
+    4. load(autoCreate=True/None) [X]
        Loads JSON data into global memory.
        - autoCreate=True: Creates a base config if none exists 
          or restors it form the Backup.
@@ -50,41 +77,46 @@ def info():
        - Should the config file be corrupted, the function 
          attempts to restore the file from the backup.
 
-    2. show(Print=True/None)
+    5. show(Print=True/None)
        Returns all loaded variable names as a list.
        If set to 'True', output is displayed in the terminal.
 
-    3. editor()
+    6. editor()
        Interactive terminal menu for changing values.
        - '/?' shows all keys | 'exit' terminates the mode.
 
-    4. edit(Var, Val) [X]
+    7. edit(Var, Val) [X]
        Changes an EXISTING value directly via code. 
 
-    5. dump(dict) [X]
+    8. dump(dict) [X]
        Updates EXISTING values in the JSON. 
        Prevents accidental creation of new keys.
 
-    6. add(Varname, Varvalue) [X]
+    9. add(Varname, Varvalue) [X]
        Creates a NEW data point in the JSON file.
 
-    7. addlist(dict) [X]
+    10. addlist(dict) [X]
        Adds multiple NEW data points simultaneously.
        Example: j.addlist({"D1": 10, "D2": 20})
 
-    8. search(Varname) [X]
+    11. search(Varname) [X]
        Checks if a variable exists in the config (True/False).
 
-    9. delete(name) [X]
+    12. delete(name) [X]
        Permanently deletes a data point from the file and memory.
 
-    10. backup() [X]
+    13. backup() [X]
         Creates a backup/current state of the config file (Config.json.bak)
 
-    11. get(Var, DefaultValue)
+    14. get(Var, DefaultValue)
         Secure data access.
         - I = jsonBib.get("Name", DefaultValue)
         - The DefaultValue (optional) is used if "Name" is not in the config file.
+
+    15. validate(Var, Valmin, Valmax=None) [X]
+        Validates if a variable meets specified conditions.
+        - For numerical values, both minimum and maximum can be set.
+        - For boolean or None values, only Valmin is required.
 
     CONTROLS & SECURITY:
     - The delete function permanently removes data from the config file.
@@ -154,6 +186,21 @@ def load(autoCreate=None):
         else:
             print ("[ERROR] Configuration restore from backup is disabled.")
             return False
+
+def setreset(set_reset=None):
+    if config_set_reset or set_reset:
+        try:
+            if os.path.exists(pfad):
+                shutil.copy(pfad, pfad + ".reset")
+                print(f"[INFO] Reset point set successfully. Backup saved as '{reset_pfad}'")
+                return True
+            return False
+        except Exception as e:
+            print(f"[ERROR] Failed to set reset point: {e}")
+            return False
+    else:
+        print ("[INFO] Set reset point is disabled.")
+        return False
 
 def show (Print=None):
     load(autoCreate=False)
@@ -395,3 +442,39 @@ def delete(name):
     
 def get(name, default=None):
     return globals().get(name, default)
+
+def reset():
+    try:
+        if os.path.exists(reset_pfad):
+            if os.path.exists(pfad):
+                os.remove(pfad)
+            os.rename(reset_pfad, pfad)
+            setreset()
+            load()
+            print("[INFO] Config has been restored and loaded from .reset!")
+            return True
+        else:
+            print("[ERROR] No reset file found. Reset failed.")
+            return False
+    except Exception as e:
+        print(f"[ERROR] Failed to reset configuration: {e}")
+        return False
+    
+def validate(Var, Valmin, Valmax=None):
+    if not isinstance(Valmin, (bool, type(None))):
+        if isinstance(Valmin, (int, float)):
+            if Valmax is not None:
+                if Valmin <= get(Var) <= Valmax:
+                    return True
+                else:
+                    return False
+            else:
+                if get(Var) == Valmin:
+                    return True
+                else:
+                    return False
+    else:
+        if get(Var) == Valmin:
+            return True
+        else:
+            return False
