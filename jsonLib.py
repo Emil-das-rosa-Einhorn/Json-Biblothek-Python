@@ -99,9 +99,12 @@ def scan_keys():
             konflikte.append(key)
             print(f"[WARNING] Key conflict detected: '{key}' is a reserved keyword and cannot be used as a variable name.")
 
-def libconfig (check=None,autoLoad=None,autoCreate=None,Print=None,set_reset=None):
+def libconfig (check=None,autoLoad=None,autoCreate=None,Print=None,set_reset=None, fileName=None):
 
     global config_autoCreate, config_Print, config_set_reset, config_autoLoad, config_check, passed
+
+    if fileName is not None:
+        filename(fileName)
 
     if autoCreate is not None:
         config_autoCreate = autoCreate
@@ -185,13 +188,14 @@ def info():
     [Functions marked with [X] return 'True' if executed 
     successfully and 'False' upon failure]
 
-    1. libconfig(check=True/None,autoLoad=True/None,autoCreate=True/None,Print=True/None,set_reset=True/None) [X]
+    1. libconfig(check=True/None,autoLoad=True/None,autoCreate=True/None,Print=True/None,set_reset=True/None, fileName="Filename"/None) [X]
        Configures the library settings.
         - check=True/None: Enables/disables config file existence check on initialization.
         - autoLoad=True/None: Enables/disables automatic loading of the config file on initialization
         - autoCreate=True/None: Enables/disables automatic creation of a base config if none exists.
         - Print=True/None: Enables/disables terminal output
         - set_reset=True/None: Enables/disables the ability to set reset points.
+        - fileName="Filename"/None: Sets a custom name for the Json file.
 
     2. filename(filename)
        Sets the name of the config file.
