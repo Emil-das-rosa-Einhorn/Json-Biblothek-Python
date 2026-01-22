@@ -38,7 +38,54 @@ ignore = {
     '__loader__', '__name__', '__package__', '__spec__'
 }
 
+def health_check(autoCreate=None):
+    if not os.path.exists(pfad):
+        if autoCreate or config_autoCreate:
+            backup_pfad = pfad + ".bak"
+            if os.path.exists(backup_pfad):
+                os.rename(backup_pfad, pfad)     
+                print("[INFO] Config has been restored from backup!")
+                backup()
+                return True
+            else:
+                standard_daten = {"Version": 1.0}
+                with open(pfad, 'w', encoding='utf-8') as f:
+                    json.dump(standard_daten, f, indent=4)
+                backup()
+                return True
+        return False
+
+    try:
+        with open(pfad, 'r', encoding='utf-8') as f:
+            pass
+        backup()
+        return True
+
+    except (json.JSONDecodeError, ValueError):
+        if autoCreate or config_autoCreate:
+            print("[WARNING] Config file corrupted! Attempting to load backup...")
+            
+            backup_pfad = pfad + ".bak"
+            
+            if os.path.exists(backup_pfad):
+                os.remove(pfad)
+                os.rename(backup_pfad, pfad)
+                
+                with open(pfad, 'r', encoding='utf-8') as f:
+                   pass
+                print("[INFO] Config has been restored from backup!")
+                backup()
+                return True
+            else:
+                print("[ERROR] No backup available. Recovery failed.")
+                return False
+        else:
+            print ("[ERROR] Configuration restore from backup is disabled.")
+            return False
+
 def scan_keys():
+    if not health_check():
+        return False
     try:
         with open(pfad, 'r', encoding='utf-8') as f:
             _daten = json.load(f)
@@ -224,61 +271,19 @@ def backup():
 
 def load(autoCreate=None):
     scan_keys()
-    if not os.path.exists(pfad):
-        if autoCreate or config_autoCreate:
-            backup_pfad = pfad + ".bak"
-            if os.path.exists(backup_pfad):
-                os.rename(backup_pfad, pfad)
-                
-                with open(pfad, 'r', encoding='utf-8') as f:
-                    _daten = json.load(f)
-                globals().update(_daten)
-                
-                print("[INFO] Config has been restored from backup!")
-                backup()
-                return True
-            else:
-                standard_daten = {"Version": 1.0}
-                with open(pfad, 'w', encoding='utf-8') as f:
-                    json.dump(standard_daten, f, indent=4)
-                globals().update(standard_daten)
-                backup()
-                return True
-        return False
-
-    try:
+    if health_check(autoCreate=autoCreate):
         with open(pfad, 'r', encoding='utf-8') as f:
             _daten = json.load(f)
-        globals().update(_daten)
-        backup()
-        return True
-
-    except (json.JSONDecodeError, ValueError):
-        if autoCreate or config_autoCreate:
-            print("[WARNING] Config file corrupted! Attempting to load backup...")
-            
-            backup_pfad = pfad + ".bak"
-            
-            if os.path.exists(backup_pfad):
-                os.remove(pfad)
-                os.rename(backup_pfad, pfad)
-                
-                with open(pfad, 'r', encoding='utf-8') as f:
-                    _daten = json.load(f)
-                globals().update(_daten)
-                
-                print("[INFO] Config has been restored from backup!")
-                backup()
-                return True
-            else:
-                print("[ERROR] No backup available. Recovery failed.")
-                return False
-        else:
-            print ("[ERROR] Configuration restore from backup is disabled.")
-            return False
+            globals().update(_daten)
+            print ("[INFO] Config file loaded successfully.")
+            return True
+    else:
+        return False
 
 def setreset(set_reset=None):
     if config_set_reset or set_reset:
+        if not health_check():
+            return False
         try:
             if os.path.exists(pfad):
                 shutil.copy(pfad, pfad + ".reset")
@@ -292,7 +297,6 @@ def setreset(set_reset=None):
         return False
 
 def show (Print=None):
-    load(autoCreate=False)
     variablen = [name for name in globals() if not name.startswith("__") and name not in ignore]
     if Print or config_Print:
         print (variablen)
@@ -301,6 +305,8 @@ def show (Print=None):
     return variablen
 
 def dump(neue_daten):
+    if not health_check():
+        return False
     backup()
     try:
         with open(pfad, 'r', encoding='utf-8') as f:
@@ -331,6 +337,9 @@ def dump(neue_daten):
     return True
 
 def editor():
+    if not health_check():
+        return False
+    
     while True:
         load(autoCreate=False)
         try:
@@ -395,8 +404,9 @@ def editor():
             break
 
 def edit(Var, Val):
-        
-    load(autoCreate=False)
+
+    if not health_check():
+        return False
     try:
 
         try:
@@ -407,33 +417,8 @@ def edit(Var, Val):
                 return True
             else:
                 dataVar = globals()[dataPoint]
-                print (f"D{dataPoint} is currently set to: {dataVar}")
-                newValin = Val
-            
-
-            if isinstance(newValin, bool):
-                print(f"detected bool ({newValin})")
-                if newValin == False:
-                    newVal = False
-                elif newValin == True:
-                    newVal = True
-            elif newValin == None:
-                newVal = None
-
-            else:
-    
-                try:
-                    newVal = int(newValin)
-                    print ("detected int")
-                
-                except ValueError:
-                    try:
-                        newVal = float(newValin)
-                        print ("detected Var")
-                    
-                    except ValueError:
-                        newVal = newValin
-                        print ("detected String")
+                print (f"{dataPoint} is currently set to: {dataVar}")
+                newVal = Val
             
         except KeyError:
             print(f"[ERROR] The data point '{dataPoint}' does not exist in the config file.")
@@ -455,6 +440,9 @@ def edit(Var, Val):
 
 def search (Varsearch):
 
+    if not health_check():
+        return False
+    
     Varonlist = False
 
     Varlist = show(Print=False)
@@ -471,6 +459,10 @@ def search (Varsearch):
         return False
     
 def add(Varname,Varvalue):
+
+    if not health_check():
+        return False
+    
     for a in ignore:
         if Varname == a:
             print(f"[ERROR] '{Varname}' is a reserved keyword and cannot be used as a variable name.")
@@ -493,6 +485,10 @@ def add(Varname,Varvalue):
     return True
 
 def addlist(newVarlist):
+
+    if not health_check():
+        return False
+
     for a in ignore:
         if a in newVarlist:
             print(f"[ERROR] '{a}' is a reserved keyword and cannot be used as a variable name.")
@@ -514,6 +510,10 @@ def addlist(newVarlist):
     return True
 
 def delete(name):
+
+    if not health_check():
+        return False
+
     try:
         with open(pfad, 'r', encoding='utf-8') as f:
             daten = json.load(f)
@@ -590,6 +590,9 @@ def reset():
     
 def validate(Var, Valmin, Valmax=None):
 
+    if not health_check():
+        return False
+    
     if Var not in globals():
         print(f"[ERROR] The variable '{Var}' does not exist.")
         return False
