@@ -43,7 +43,8 @@ def scan_keys():
         with open(pfad, 'r', encoding='utf-8') as f:
             _daten = json.load(f)
 
-    except (json.JSONDecodeError, ValueError):
+    except Exception as e:
+        print(f"[ERROR] Failed to scan keys: {e}")
         return False
     
     for key in _daten.keys():
