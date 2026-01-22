@@ -194,9 +194,11 @@ def info():
     14. backup() [X]
         Creates a backup/current state of the config file (Config.json.bak)
 
-    15. get(Var, DefaultValue)
+    15. get(key, group=None, default=None)
         Secure data access.
-        - I = jsonBib.get("Name", DefaultValue)
+        - I = jsonBib.get("Name", group="group", default="DefaultValue")
+        - The Key is the name of the data point to retrieve.
+        - The Group (optional) specifies a subgroup within the JSON structure.
         - The DefaultValue (optional) is used if "Name" is not in the config file.
 
     16. validate(Var, Valmin, Valmax=None) [X]
@@ -535,8 +537,38 @@ def delete(name):
         print(f"[ERROR] Failed to delete: {e}")
         return False
     
-def get(name, default=None):
-    return globals().get(name, default)
+def get(key, group=None, default=None):
+    try:
+        with open(pfad, 'r', encoding='utf-8') as f:
+            daten = json.load(f)
+
+        if group is not None:
+            if group in daten and key in daten[group]:
+                wert = daten[group][key]
+            else:
+                return default
+
+        else:
+            def find_recursive(obj, target):
+                if target in obj:
+                    return obj[target]
+                for v in obj.values():
+                    if isinstance(v, dict):
+                        res = find_recursive(v, target)
+                        if res is not None:
+                            return res
+                return None
+            
+            wert = find_recursive(daten, key)
+
+        if wert is None:
+            return default
+    
+        return wert
+
+    except Exception as e:
+        print(f"[ERROR] get failed for '{key}': {e}")
+        return default
 
 def reset():
     try:

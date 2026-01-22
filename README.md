@@ -84,9 +84,11 @@ MAIN FUNCTIONS
 13. backup() [X]
    - Creates a backup/current state of the config file (Config.json.bak)
 
-14. get(Var, DefaultValue)
+14. get(key, group=None, default=None)
    - Secure data access.
-      - I = jsonBib.get("Name", DefaultValue)
+      - I = jsonBib.get("Name", group="group", default="DefaultValue")
+      - The Key is the name of the data point to retrieve.
+      - The Group (optional) specifies a subgroup within the JSON structure.
       - The DefaultValue (optional) is used if "Name" is not in the config file.
 
 15. validate(Var, Valmin, Valmax=None) [X]
