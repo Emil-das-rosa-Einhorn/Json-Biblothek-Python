@@ -253,7 +253,10 @@ def info():
         - The Group (optional) specifies a subgroup within the JSON structure.
         - The DefaultValue (optional) is used if "Name" is not in the config file.
 
-    16. validate(Var, Valmin, Valmax=None) [X]
+    16. getAll()
+        Returns all data points in the config file as a dictionary.
+
+    17. validate(Var, Valmin, Valmax=None) [X]
         Validates if a variable meets specified conditions.
         - For numerical values, both minimum and maximum can be set.
         - For boolean or None values, only Valmin is required.
@@ -574,6 +577,17 @@ def get(key, group=None, default=None):
     except Exception as e:
         print(f"[ERROR] get failed for '{key}': {e}")
         return default
+    
+def getAll():
+    health_check()
+    backup()
+    try:
+        with open(pfad, 'r', encoding='utf-8') as f:
+            daten = json.load(f)
+        return daten
+    except Exception as e:
+        print(f"[ERROR] getAll failed: {e}")
+        return None
 
 def reset():
     try:
