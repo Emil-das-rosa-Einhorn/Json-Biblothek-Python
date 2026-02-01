@@ -2,7 +2,7 @@ import json
 import os
 import shutil
 
-file_Name = 'config.json'
+file_Name = 'files/config.json'
 
 pfad = os.path.join(os.path.dirname(__file__), file_Name)
 backup_pfad = pfad + ".bak"
