@@ -1,6 +1,7 @@
 import json
 import os
 import shutil
+import portalocker
 
 file_Name = 'files/config.json'
 
@@ -104,7 +105,7 @@ def libconfig (check=None,autoLoad=None,autoCreate=None,Print=None,set_reset=Non
     global config_autoCreate, config_Print, config_set_reset, config_autoLoad, config_check, passed
 
     if filename is not None:
-        filename(filename)
+        fileName(filename)
 
     if autoCreate is not None:
         config_autoCreate = autoCreate
@@ -161,7 +162,7 @@ def libconfig (check=None,autoLoad=None,autoCreate=None,Print=None,set_reset=Non
         
     return passed
 
-def filename(filename):
+def fileName(filename):
     global pfad, backup_pfad, reset_pfad
     pfad = os.path.join(os.path.dirname(__file__), filename)
     backup_pfad = pfad + ".bak"
@@ -197,7 +198,7 @@ def info():
         - set_reset=True/None: Enables/disables the ability to set reset points.
         - fileName="Filename"/None: Sets a custom name for the Json file.
 
-    2. filename(filename)
+    2. fileName(filename)
        Sets the name of the config file.
 
     3. setreset(set_reset=TrueNone) [X]
@@ -352,7 +353,14 @@ def dump(neue_daten, group=None):
 
     if success:
         with open(pfad, 'w', encoding='utf-8') as f:
-            json.dump(daten, f, indent=4, ensure_ascii=False)
+            try:
+                portalocker.lock(f, portalocker.LOCK_EX)
+                json.dump(daten, f, indent=4, ensure_ascii=False)
+                f.flush()
+            except Exception as e:
+                return False
+            finally:
+                portalocker.unlock(f)
         backup()
         return True
     
@@ -485,7 +493,14 @@ def add(Varname,Varvalue):
     daten.update(newVardata)
 
     with open(pfad, 'w', encoding='utf-8') as f:
-        json.dump(daten, f, indent=4, ensure_ascii=False)
+        try:
+            portalocker.lock(f, portalocker.LOCK_EX)
+            json.dump(daten, f, indent=4, ensure_ascii=False)
+            f.flush()
+        except Exception as e:
+            return False
+        finally:
+            portalocker.unlock(f)
     
     print(f"Update successful: {list(newVardata.keys())} updated.")
     backup()
@@ -511,7 +526,14 @@ def addlist(newVarlist):
     daten.update(newVarlist)
 
     with open(pfad, 'w', encoding='utf-8') as f:
-        json.dump(daten, f, indent=4, ensure_ascii=False)
+        try:
+            portalocker.lock(f, portalocker.LOCK_EX)
+            json.dump(daten, f, indent=4, ensure_ascii=False)
+            f.flush()
+        except Exception as e:
+            return False
+        finally:
+            portalocker.unlock(f)
     
     print(f"Update successful: {list(newVarlist.keys())} updated.")
     return True
@@ -529,7 +551,14 @@ def delete(name):
             del daten[name]
             
             with open(pfad, 'w', encoding='utf-8') as f:
-                json.dump(daten, f, indent=4, ensure_ascii=False)
+                try:
+                    portalocker.lock(f, portalocker.LOCK_EX)
+                    json.dump(daten, f, indent=4, ensure_ascii=False)
+                    f.flush()
+                except Exception as e:
+                    return False
+                finally:
+                    portalocker.unlock(f)
             
             if name in globals():
                 del globals()[name]
@@ -651,7 +680,14 @@ def renameGroup(old_name, new_name):
             data[new_name] = data.pop(old_name)
             
             with open(pfad, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=4, ensure_ascii=False)
+                try:
+                    portalocker.lock(f, portalocker.LOCK_EX)
+                    json.dump(data, f, indent=4, ensure_ascii=False)
+                    f.flush()
+                except Exception as e:
+                    return False
+                finally:
+                    portalocker.unlock(f)
             
             print(f"[SUCCESS] Group '{old_name}' renamed to '{new_name}'")
             return True
