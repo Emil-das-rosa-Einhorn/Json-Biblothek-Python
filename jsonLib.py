@@ -223,7 +223,7 @@ def info():
        Interactive terminal menu for changing values.
        - '/?' shows all keys | 'exit' terminates the mode.
 
-    8. edit(Var, Val) [X]
+    8. edit(Var, Val,group="name"/None) [X]
        Changes an EXISTING value directly via code. 
 
     9. dump(dict) [X]
@@ -260,6 +260,10 @@ def info():
         Validates if a variable meets specified conditions.
         - For numerical values, both minimum and maximum can be set.
         - For boolean or None values, only Valmin is required.
+    
+    18. renameGroup(old_name, new_name) [X]
+        Renames a Group or Key.
+        
 
     CONTROLS & SECURITY:
     - The delete function permanently removes data from the config file.
@@ -311,37 +315,48 @@ def show (Print=None):
         pass
     return variablen
 
-def dump(neue_daten):
+def dump(neue_daten, group=None):
     if not health_check():
         return False
+    
     backup()
     try:
         with open(pfad, 'r', encoding='utf-8') as f:
             daten = json.load(f)
     except FileNotFoundError:
-        print("[ERROR] File not found. No updates possible.")
+        print("[ERROR] File not found.")
         return False
 
-    filtered_data = {}
-    rejected_keys = []
+    success = False
 
-    for key, wert in neue_daten.items():
-        if key in daten:
-            filtered_data[key] = wert
+    if group:
+        if group in daten and isinstance(daten[group], dict):
+            for key, wert in neue_daten[group].items():
+                if key in daten[group]:
+                    daten[group][key] = wert
+                    print(f"Update in '{group}': {key} updated.")
+                    success = True
+                else:
+                    print(f"[ERROR] Key '{key}' not found in group '{group}'.")
         else:
-            rejected_keys.append(key)
+            print(f"[ERROR] Group '{group}' does not exist.")
+            return False
+    else:
+        for key, wert in neue_daten.items():
+            if key in daten:
+                daten[key] = wert
+                print(f"Update successful: {key} updated.")
+                success = True
+            else:
+                print(f"[INFO] Key '{key}' ignored (exists not).")
 
-    if filtered_data:
-        daten.update(filtered_data)
+    if success:
         with open(pfad, 'w', encoding='utf-8') as f:
             json.dump(daten, f, indent=4, ensure_ascii=False)
-        print(f"Update successful: {list(filtered_data.keys())} updated.")
+        backup()
+        return True
     
-    if rejected_keys:
-        print(f"[INFO] New data points ignored: {rejected_keys} (Do not exist in config).")
-        return False
-    backup()
-    return True
+    return False
 
 def editor():
     if not health_check():
@@ -410,40 +425,25 @@ def editor():
             print ("[INFO] Editor session ended.")
             break
 
-def edit(Var, Val):
-
+def edit(Var, Val, group=None):
     if not health_check():
         return False
-    try:
-
-        try:
-            dataPoint = Var
-
-            if dataPoint == "/?":
-                show(True)
-                return True
-            else:
-                dataVar = globals()[dataPoint]
-                print (f"{dataPoint} is currently set to: {dataVar}")
-                newVal = Val
-            
-        except KeyError:
-            print(f"[ERROR] The data point '{dataPoint}' does not exist in the config file.")
-            return False
-
-        except Exception as e:
-            print (e)
-            print ("[ERROR] Invalid input")
-            return False
-
-        else:
-            daten = {dataPoint: newVal}
-            dump (daten)
-    except KeyboardInterrupt:
-        print ("[INFO] Editor session ended.")
-        return False
     
-    return True
+    try:
+        if Var == "/?":
+            show(True)
+            return True
+
+        if group:
+            payload = {group: {Var: Val}} 
+        else:
+            payload = {Var: Val}
+
+        return dump(payload, group=group)
+
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        return False
 
 def search (Varsearch):
 
@@ -634,3 +634,31 @@ def validate(Var, Valmin, Valmax=None):
             return True
         else:
             return False
+        
+def renameGroup(old_name, new_name):
+    if not health_check():
+        return False
+    
+    try:
+        backup()
+        with open(pfad, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+
+        if new_name in data:
+            print(f"[ERROR] Group '{new_name}' already exists.")
+            return False
+        if old_name in data:
+            data[new_name] = data.pop(old_name)
+            
+            with open(pfad, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=4, ensure_ascii=False)
+            
+            print(f"[SUCCESS] Group '{old_name}' renamed to '{new_name}'")
+            return True
+        else:
+            print(f"[ERROR] Group '{old_name}' not found.")
+            return False
+            
+    except Exception as e:
+        print(f"[ERROR] {e}")
+        return False

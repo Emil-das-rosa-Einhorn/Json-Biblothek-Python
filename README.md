@@ -100,6 +100,9 @@ MAIN FUNCTIONS
       - For numerical values, both minimum and maximum can be set.
       - For boolean or None values, only Valmin is required.
 
+18. renameGroup(old_name, new_name) [X]
+   - Renames a Group or Key.
+
 ------------------------------------------------------------
 DATA SECURITY (.bak/.reset)
 ------------------------------------------------------------
