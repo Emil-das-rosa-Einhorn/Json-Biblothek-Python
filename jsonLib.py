@@ -99,12 +99,12 @@ def scan_keys():
             konflikte.append(key)
             print(f"[WARNING] Key conflict detected: '{key}' is a reserved keyword and cannot be used as a variable name.")
 
-def libconfig (check=None,autoLoad=None,autoCreate=None,Print=None,set_reset=None, fileName=None):
+def libconfig (check=None,autoLoad=None,autoCreate=None,Print=None,set_reset=None, filename=None):
 
     global config_autoCreate, config_Print, config_set_reset, config_autoLoad, config_check, passed
 
-    if fileName is not None:
-        filename(fileName)
+    if filename is not None:
+        filename(filename)
 
     if autoCreate is not None:
         config_autoCreate = autoCreate
@@ -188,7 +188,7 @@ def info():
     [Functions marked with [X] return 'True' if executed 
     successfully and 'False' upon failure]
 
-    1. libconfig(check=True/None,autoLoad=True/None,autoCreate=True/None,Print=True/None,set_reset=True/None, fileName="Filename"/None) [X]
+    1. libconfig(check=True/None,autoLoad=True/None,autoCreate=True/None,Print=True/None,set_reset=True/None, filename="Filename"/None) [X]
        Configures the library settings.
         - check=True/None: Enables/disables config file existence check on initialization.
         - autoLoad=True/None: Enables/disables automatic loading of the config file on initialization
