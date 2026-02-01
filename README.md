@@ -1,10 +1,9 @@
 ==========  JSON LIBRARY - README (v2.1)  ==========
 
 DESCRIPTION:
-This library enables easy management of configuration 
-files in Python. JSON data is loaded directly into 
-global variables and automatically saved when changes 
-are made.
+This library enables easy management of configuration files in Python. 
+JSON data can be loaded directly into global variables for easy access. 
+The file is automatically saved when changes are made, and backups and reset points can be created.
 
 ------------------------------------------------------------
 MAIN FEATURES
