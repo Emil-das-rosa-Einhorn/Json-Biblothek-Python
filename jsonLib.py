@@ -294,7 +294,7 @@ def setreset(set_reset=None):
         try:
             if os.path.exists(pfad):
                 shutil.copy(pfad, pfad + ".reset")
-                print(f"[INFO] Reset point set successfully. Backup saved as '{reset_pfad}'")
+                print(f"[INFO] Reset point set successfully. Reset point saved as '{reset_pfad}'")
                 return True
             return False
         except Exception as e:
