@@ -19,25 +19,16 @@ passed = True
 konflikte = []
 
 ignore = {
-    # --- 1. Python Built-ins (Systemfunktionen) ---
-    'abs', 'bool', 'dict', 'dir', 'eval', 'exec', 'exit', 'float', 'globals', 
-    'help', 'id', 'input', 'int', 'len', 'list', 'locals', 'max', 'min', 
-    'open', 'print', 'quit', 'range', 'set', 'str', 'sum', 'type', 'vars',
-
-    # --- 2. Importierte Module & Bibliotheken ---
-    'json', 'math', 'os', 'portalocker', 'shutil', 'sqlite3', 'sys', 'time', 'zmq',
-
-    # --- 3. Deine Bibliotheks-Funktionen & Variablen ---
-    'add', 'addlist', 'backup', 'backup_pfad', 'config_autoCreate', 'config_autoLoad', 
-    'config_check', 'config_Print', 'config_set_reset', 'delete', 'dump', 'edit', 
-    'editor', 'file_Name', 'filename', 'get', 'ignore', 'info', 'konflikte', 'libconfig', 
-    'load', 'passed', 'pfad', 'Print', 'reset_pfad', 'scan_keys', 'search', 'setreset', 
-    'show', 'validate',
-
-    # --- 4. Python Interne Namen (Dunder-Methods) ---
-    '__annotations__', '__builtins__', '__cached__', '__doc__', '__file__', 
-    '__loader__', '__name__', '__package__', '__spec__'
+    '__annotations__', '__builtins__', '__cached__', '__doc__', 
+    '__file__', '__loader__', '__name__', '__package__', '__spec__'
 }
+
+class ConfigContainer:
+    """Ein Container für alle Konfigurationswerte."""
+    def __getattr__(self, name):
+        return None
+
+cfg = ConfigContainer()
 
 def health_check(autoCreate=None):
     if not os.path.exists(pfad):
@@ -46,20 +37,17 @@ def health_check(autoCreate=None):
             if os.path.exists(backup_pfad):
                 os.rename(backup_pfad, pfad)     
                 print("[INFO] Config has been restored from backup!")
-                backup()
                 return True
             else:
                 standard_daten = {"Version": 1.0}
                 with open(pfad, 'w', encoding='utf-8') as f:
                     json.dump(standard_daten, f, indent=4)
-                backup()
                 return True
         return False
 
     try:
         with open(pfad, 'r', encoding='utf-8') as f:
             pass
-        backup()
         return True
 
     except (json.JSONDecodeError, ValueError):
@@ -75,7 +63,6 @@ def health_check(autoCreate=None):
                 with open(pfad, 'r', encoding='utf-8') as f:
                    pass
                 print("[INFO] Config has been restored from backup!")
-                backup()
                 return True
             else:
                 print("[ERROR] No backup available. Recovery failed.")
@@ -286,8 +273,10 @@ def load(autoCreate=None):
     if health_check(autoCreate=autoCreate):
         with open(pfad, 'r', encoding='utf-8') as f:
             _daten = json.load(f)
-            globals().update(_daten)
-            print ("[INFO] Config file loaded successfully.")
+            cfg.__dict__.clear()
+            cfg.__dict__.update(_daten)
+            
+            print(f"[INFO] Config file loaded into 'cfg' object.")
             return True
     else:
         return False
@@ -309,7 +298,7 @@ def setreset(set_reset=None):
         return False
 
 def show (Print=None):
-    variablen = [name for name in globals() if not name.startswith("__") and name not in ignore]
+    variablen = [name for name in cfg.__dict__ if not name.startswith("__")]
     if Print or config_Print:
         print (variablen)
     else:
@@ -365,73 +354,6 @@ def dump(neue_daten, group=None):
         return True
     
     return False
-
-def editor():
-    if not health_check():
-        return False
-    
-    while True:
-        load(autoCreate=False)
-        try:
-
-            try:
-                dataPoint = (input("Please enter the name of the variable you would like to change:"))
-                if dataPoint == "/?":
-                    show(True)
-                    continue
-                elif dataPoint == "exit":
-                    print ("[INFO] Editor session ended.")
-                    break
-
-                else:
-                    dataVar = globals()[dataPoint]
-                    print (f"{dataPoint} is currently set to: {dataVar}")
-                    newValin = (input("Please enter the new value: "))
-
-                if newValin == "False":
-                    newValin = False
-                    daten = {dataPoint: newValin}
-                    dump (daten)
-                    continue
-                elif newValin == "True":
-                    newValin = True
-                    daten = {dataPoint: newValin}
-                    dump (daten)
-                    continue
-                elif newValin == "None":
-                    newValin = None
-                    daten = {dataPoint: newValin}
-                    dump (daten)
-                    continue
-                else:
-
-                    try:
-                        newVal = int(newValin)
-                        print ("detected int")
-                    
-                    except ValueError:
-                        try:
-                            newVal = float(newValin)
-                            print ("detected Var")
-                        
-                        except ValueError:
-                            newVal = newValin
-                            print ("detected String")
-                
-            except KeyError:
-                print(f"""[ERROR] The data point '{dataPoint}' does not exist in the config file. 
- Type /? to see a list of all variables.""")
-
-            except Exception as e:
-                #print (e)
-                print ("[ERROR] Invalid input")
-
-            else:
-                daten = {dataPoint: newVal}
-                dump (daten)
-        except KeyboardInterrupt:
-            print ("[INFO] Editor session ended.")
-            break
 
 def edit(Var, Val, group=None):
     if not health_check():
@@ -640,7 +562,9 @@ def validate(Var, Valmin, Valmax=None):
     if not health_check():
         return False
     
-    if Var not in globals():
+    current_val = get(Var)
+
+    if current_val is None:
         print(f"[ERROR] The variable '{Var}' does not exist.")
         return False
     if Valmax is not None and isinstance(Valmax, (bool, str, type(None))):

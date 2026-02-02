@@ -2,13 +2,13 @@
 
 DESCRIPTION:
 This library enables easy management of configuration files in Python. 
-JSON data can be loaded directly into global variables for easy access. 
+JSON data can be loaded directly into a class (cfg.) for easy access. 
 The file is automatically saved when changes are made, and backups and reset points can be created.
 
 ------------------------------------------------------------
 MAIN FEATURES
 ------------------------------------------------------------
-* Auto-Load:    JSON keys become Python variables.
+* Auto-Load:    Import keys as a class for easy access.
 * Self-Healing: Automatic repair via .bak files.
 * Editor:       Change values interactively in the terminal.
 * Security:     Automatic backup before every write operation.
@@ -20,7 +20,7 @@ INSTALLATION & START
 ------------------------------------------------------------
 1. Copy the file 'JsonBib.py' into your project directory.
 2. Import:       import JsonBib as j
-3. Setup:        j.bibconfig(autoCreate=True/None, Print=True/None, set_reset=True/None)
+3. Setup:        j.bibconfig(check=True/None,autoLoad=True/None,autoCreate=True/None,Print=True/None,set_reset=True/None,fileName="Filename"/None)
 4. Load:         j.load()
 5. Info:         j.info()
 
