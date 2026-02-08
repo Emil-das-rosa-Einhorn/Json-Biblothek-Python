@@ -251,6 +251,11 @@ def info():
     
     18. renameGroup(old_name, new_name) [X]
         Renames a Group or Key.
+
+    19. compare (Filename1=None,Filename2=None) [X]
+        lets you compare the content of two files.
+        if no file name is given the function will compare the 
+        set config file and the Config.reset file
         
 
     CONTROLS & SECURITY:
@@ -621,4 +626,26 @@ def renameGroup(old_name, new_name):
             
     except Exception as e:
         print(f"[ERROR] {e}")
+        return False
+    
+def compare (Filename1=None,Filename2=None):
+    if Filename1 == None:
+        file1_pfad = pfad
+    else:
+        file1_pfad = os.path.join(os.path.dirname(__file__), Filename1)
+    
+    if Filename2 == None:
+        file2_pfad = reset_pfad
+    else:
+        file2_pfad = os.path.join(os.path.dirname(__file__), Filename2)
+
+    with open(file1_pfad, 'r', encoding='utf-8') as f:
+        confjson = json.load(f)
+    
+    with open(file2_pfad, 'r', encoding='utf-8') as f:
+        resetjson = json.load(f)
+
+    if confjson == resetjson:
+        return True
+    else:
         return False

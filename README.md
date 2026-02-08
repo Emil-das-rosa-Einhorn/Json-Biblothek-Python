@@ -102,6 +102,11 @@ MAIN FUNCTIONS
 18. renameGroup(old_name, new_name) [X]
    - Renames a Group or Key.
 
+19. compare (Filename1=None,Filename2=None) [X]
+   lets you compare the content of two files.
+   if no file name is given the function will compare the 
+   set config file and the Config.reset file
+
 ------------------------------------------------------------
 DATA SECURITY (.bak/.reset)
 ------------------------------------------------------------
