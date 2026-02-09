@@ -3,6 +3,8 @@ import os
 import shutil
 import portalocker
 
+"""Save-Logic-v2"""
+
 file_Name = 'files/config.json'
 
 pfad = os.path.join(os.path.dirname(__file__), file_Name)
