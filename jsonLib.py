@@ -17,6 +17,7 @@ config_set_reset = False
 config_autoLoad = False
 config_check = False
 passed = True
+MsgtoCons_global = 0
 
 konflikte = []
 
@@ -32,13 +33,23 @@ class ConfigContainer:
 
 cfg = ConfigContainer()
 
+def _read(filename=None):
+    if filename is not None:
+        fileName(filename)
+    if health_check():
+        with open(pfad, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        return data
+    else:
+        if MsgtoCons_global <= 2: print ("[ERROR] File could not be Opened")
+        return None
+
 def health_check(autoCreate=None):
     if not os.path.exists(pfad):
         if autoCreate or config_autoCreate:
-            backup_pfad = pfad + ".bak"
             if os.path.exists(backup_pfad):
                 os.rename(backup_pfad, pfad)     
-                print("[INFO] Config has been restored from backup!")
+                if MsgtoCons_global <= 0: print("[INFO] Config has been restored from backup!")
                 return True
             else:
                 standard_daten = {"Version": 1.0}
@@ -54,7 +65,7 @@ def health_check(autoCreate=None):
 
     except (json.JSONDecodeError, ValueError):
         if autoCreate or config_autoCreate:
-            print("[WARNING] Config file corrupted! Attempting to load backup...")
+            if MsgtoCons_global <= 1: print("[WARNING] Config file corrupted! Attempting to load backup...")
             
             backup_pfad = pfad + ".bak"
             
@@ -64,34 +75,40 @@ def health_check(autoCreate=None):
                 
                 with open(pfad, 'r', encoding='utf-8') as f:
                    pass
-                print("[INFO] Config has been restored from backup!")
+                if MsgtoCons_global <= 0: print("[INFO] Config has been restored from backup!")
                 return True
             else:
-                print("[ERROR] No backup available. Recovery failed.")
+                if MsgtoCons_global <= 2: print("[ERROR] No backup available. Recovery failed.")
                 return False
         else:
-            print ("[ERROR] Configuration restore from backup is disabled.")
+            if MsgtoCons_global <= 2: print ("[ERROR] Configuration restore from backup is disabled.")
             return False
 
 def scan_keys():
     if not health_check():
         return False
-    try:
-        with open(pfad, 'r', encoding='utf-8') as f:
-            _daten = json.load(f)
-
-    except Exception as e:
-        print(f"[ERROR] Failed to scan keys: {e}")
-        return False
     
+    else:
+        _daten = _read()
+    check_failed = False
     for key in _daten.keys():
         if key in ignore:
             konflikte.append(key)
-            print(f"[WARNING] Key conflict detected: '{key}' is a reserved keyword and cannot be used as a variable name.")
+            if MsgtoCons_global <= 1: print(f"[WARNING] Key conflict detected: '{key}' is a reserved keyword and cannot be used as a variable name.")
+            check_failed = True
+        else:
+            if MsgtoCons_global <= 0: print (f"[INFO] {key} is not a reserved keyword")
+        
+    if check_failed:
+        return False
+    else:
+        return True
 
-def libconfig (check=None,autoLoad=None,autoCreate=None,Print=None,set_reset=None, filename=None):
+def libconfig (check=None,autoLoad=None,autoCreate=None,Print=None,set_reset=None, filename=None, MsgtoCons = 0):
 
-    global config_autoCreate, config_Print, config_set_reset, config_autoLoad, config_check, passed
+    global config_autoCreate, config_Print, config_set_reset, config_autoLoad, config_check, passed, MsgtoCons_global
+
+    MsgtoCons_global = MsgtoCons
 
     if filename is not None:
         fileName(filename)
@@ -129,24 +146,24 @@ def libconfig (check=None,autoLoad=None,autoCreate=None,Print=None,set_reset=Non
             passed = True
         else:
             if config_autoLoad:
-                print("[INFO] Auto loading config...")
+                if MsgtoCons_global <= 0: print("[INFO] Auto loading config...")
                 load()
                 if os.path.exists(pfad):
                     passed = True
                 else:
-                    print("[ERROR] No Config found and unable to auto load! Please create a config file or disable 'Config check' in libconfig.")
+                    if MsgtoCons_global <= 2:print("[ERROR] No Config found and unable to auto load! Please create a config file or disable 'Config check' in libconfig.")
                     passed = False
             else:
-                print("[ERROR] No Config found! Please create a config file or disable 'Config check' in libconfig.")
+                if MsgtoCons_global <= 2: print("[ERROR] No Config found! Please create a config file or disable 'Config check' in libconfig.")
                 passed = False
     
     if not setreset():
         if not config_set_reset:
-            print ("[WARNING] 'Set reset point' is disabled.")
+            if MsgtoCons_global <= 1: print ("[WARNING] 'Set reset point' is disabled.")
             if passed:
                 pass
         else:
-            print ("[WARNING] Could not set reset point. Ensure that the config file exists or 'Set reset point' is enabled.")
+            if MsgtoCons_global <= 1: print ("[WARNING] Could not set reset point. Ensure that the config file exists or 'Set reset point' is enabled.")
             passed = False
         
     return passed
@@ -178,7 +195,7 @@ def info():
     [Functions marked with [X] return 'True' if executed 
     successfully and 'False' upon failure]
 
-    1. libconfig(check=True/None,autoLoad=True/None,autoCreate=True/None,Print=True/None,set_reset=True/None, filename="Filename"/None) [X]
+    1. libconfig(check=True/None,autoLoad=True/None,autoCreate=True/None,Print=True/None,set_reset=True/None, filename="Filename"/None, MsgtoCons=0-3) [X]
        Configures the library settings.
         - check=True/None: Enables/disables config file existence check on initialization.
         - autoLoad=True/None: Enables/disables automatic loading of the config file on initialization
@@ -186,6 +203,11 @@ def info():
         - Print=True/None: Enables/disables terminal output
         - set_reset=True/None: Enables/disables the ability to set reset points.
         - fileName="Filename"/None: Sets a custom name for the Json file.
+        - MsgtoCons=0-3 controls which messages are printed to the console.
+          - MsgtoCons=0: All messages are printed.
+          - MsgtoCons=1: [WARNING] & [ERROR] are printed.
+          - MsgtoCons=2: [ERROR] is printed.
+          - MsgtoCons=3: No messages are printed.
 
     2. fileName(filename)
        Sets the name of the config file.
@@ -283,7 +305,7 @@ def load(autoCreate=None):
             cfg.__dict__.clear()
             cfg.__dict__.update(_daten)
             
-            print(f"[INFO] Config file loaded into 'cfg' object.")
+            if MsgtoCons_global <= 0: print(f"[INFO] Config file loaded into 'cfg' object.")
             return True
     else:
         return False
@@ -295,11 +317,11 @@ def setreset(set_reset=None):
         try:
             if os.path.exists(pfad):
                 shutil.copy(pfad, pfad + ".reset")
-                print(f"[INFO] Reset point set successfully. Reset point saved as '{reset_pfad}'")
+                if MsgtoCons_global <= 0: print(f"[INFO] Reset point set successfully. Reset point saved as '{reset_pfad}'")
                 return True
             return False
         except Exception as e:
-            print(f"[ERROR] Failed to set reset point: {e}")
+            if MsgtoCons_global <= 2: print(f"[ERROR] Failed to set reset point: {e}")
             return False
     else:
         return False
@@ -321,7 +343,7 @@ def dump(neue_daten, group=None):
         with open(pfad, 'r', encoding='utf-8') as f:
             daten = json.load(f)
     except FileNotFoundError:
-        print("[ERROR] File not found.")
+        if MsgtoCons_global <= 2: print("[ERROR] File not found.")
         return False
 
     success = False
@@ -331,21 +353,21 @@ def dump(neue_daten, group=None):
             for key, wert in neue_daten[group].items():
                 if key in daten[group]:
                     daten[group][key] = wert
-                    print(f"Update in '{group}': {key} updated.")
+                    if MsgtoCons_global <= 0: print(f"Update in '{group}': {key} updated.")
                     success = True
                 else:
-                    print(f"[ERROR] Key '{key}' not found in group '{group}'.")
+                    if MsgtoCons_global <= 2: print(f"[ERROR] Key '{key}' not found in group '{group}'.")
         else:
-            print(f"[ERROR] Group '{group}' does not exist.")
+            if MsgtoCons_global <= 2: print(f"[ERROR] Group '{group}' does not exist.")
             return False
     else:
         for key, wert in neue_daten.items():
             if key in daten:
                 daten[key] = wert
-                print(f"Update successful: {key} updated.")
+                if MsgtoCons_global <= 0: print(f"Update successful: {key} updated.")
                 success = True
             else:
-                print(f"[INFO] Key '{key}' ignored (exists not).")
+                if MsgtoCons_global <= 0: print(f"[INFO] Key '{key}' ignored (exists not).")
 
     if success:
         with open(pfad, 'w', encoding='utf-8') as f:
@@ -379,7 +401,7 @@ def edit(Var, Val, group=None):
         return dump(payload, group=group)
 
     except Exception as e:
-        print(f"[ERROR] {e}")
+        if MsgtoCons_global <= 2: print(f"[ERROR] {e}")
         return False
 
 def search (Varsearch):
@@ -409,7 +431,7 @@ def add(Varname,Varvalue):
     
     for a in ignore:
         if Varname == a:
-            print(f"[ERROR] '{Varname}' is a reserved keyword and cannot be used as a variable name.")
+            if MsgtoCons_global <= 2: print(f"[ERROR] '{Varname}' is a reserved keyword and cannot be used as a variable name.")
             return False
     newVardata = {Varname: Varvalue}
     try:
@@ -431,7 +453,7 @@ def add(Varname,Varvalue):
         finally:
             portalocker.unlock(f)
     
-    print(f"Update successful: {list(newVardata.keys())} updated.")
+    if MsgtoCons_global <= 0: print(f"Update successful: {list(newVardata.keys())} updated.")
     backup()
     return True
 
@@ -442,7 +464,7 @@ def addlist(newVarlist):
 
     for a in ignore:
         if a in newVarlist:
-            print(f"[ERROR] '{a}' is a reserved keyword and cannot be used as a variable name.")
+            if MsgtoCons_global <= 2: print(f"[ERROR] '{a}' is a reserved keyword and cannot be used as a variable name.")
             return False
         
     try:
@@ -464,7 +486,7 @@ def addlist(newVarlist):
         finally:
             portalocker.unlock(f)
     
-    print(f"Update successful: {list(newVarlist.keys())} updated.")
+    if MsgtoCons_global <= 0: print(f"Update successful: {list(newVarlist.keys())} updated.")
     return True
 
 def delete(name):
@@ -492,15 +514,15 @@ def delete(name):
             if name in globals():
                 del globals()[name]
                 
-            print(f"[INFO] '{name}' deleted successfully.")
+            if MsgtoCons_global <= 0: print(f"[INFO] '{name}' deleted successfully.")
             backup ()
             return True
         else:
-            print(f"[ERROR] '{name}' does not exist and cannot be deleted.")
+            if MsgtoCons_global <= 2: print(f"[ERROR] '{name}' does not exist and cannot be deleted.")
             return False
             
     except Exception as e:
-        print(f"[ERROR] Failed to delete: {e}")
+        if MsgtoCons_global <= 2: print(f"[ERROR] Failed to delete: {e}")
         return False
     
 def get(key, group=None, default=None):
@@ -533,18 +555,17 @@ def get(key, group=None, default=None):
         return wert
 
     except Exception as e:
-        print(f"[ERROR] get failed for '{key}': {e}")
+        if MsgtoCons_global <= 3: print(f"[ERROR] get failed for '{key}': {e}")
         return default
     
 def getAll():
     health_check()
     backup()
     try:
-        with open(pfad, 'r', encoding='utf-8') as f:
-            daten = json.load(f)
-        return daten
+        data = _read()
+        return data
     except Exception as e:
-        print(f"[ERROR] getAll failed: {e}")
+        if MsgtoCons_global <= 2: print(f"[ERROR] getAll failed: {e}")
         return None
 
 def reset():
@@ -555,13 +576,13 @@ def reset():
             os.rename(reset_pfad, pfad)
             setreset()
             load()
-            print("[INFO] Config has been restored and loaded from .reset!")
+            if MsgtoCons_global <= 0: print("[INFO] Config has been restored and loaded from .reset!")
             return True
         else:
-            print("[ERROR] No reset file found. Reset failed.")
+            if MsgtoCons_global <= 2: print("[ERROR] No reset file found. Reset failed.")
             return False
     except Exception as e:
-        print(f"[ERROR] Failed to reset configuration: {e}")
+        if MsgtoCons_global <= 2: print(f"[ERROR] Failed to reset configuration: {e}")
         return False
     
 def validate(Var, Valmin, Valmax=None):
@@ -572,10 +593,10 @@ def validate(Var, Valmin, Valmax=None):
     current_val = get(Var)
 
     if current_val is None:
-        print(f"[ERROR] The variable '{Var}' does not exist.")
+        if MsgtoCons_global <= 2: print(f"[ERROR] The variable '{Var}' does not exist.")
         return False
     if Valmax is not None and isinstance(Valmax, (bool, str, type(None))):
-        print("[ERROR] Valmax must be a number.")
+        if MsgtoCons_global <= 2: print("[ERROR] Valmax must be a number.")
         return False
     if not isinstance(Valmin, (bool, type(None))):
         if isinstance(Valmin, (int, float)):
@@ -605,7 +626,7 @@ def renameGroup(old_name, new_name):
             data = json.load(f)
 
         if new_name in data:
-            print(f"[ERROR] Group '{new_name}' already exists.")
+            if MsgtoCons_global <= 2: print(f"[ERROR] Group '{new_name}' already exists.")
             return False
         if old_name in data:
             data[new_name] = data.pop(old_name)
@@ -620,14 +641,14 @@ def renameGroup(old_name, new_name):
                 finally:
                     portalocker.unlock(f)
             
-            print(f"[SUCCESS] Group '{old_name}' renamed to '{new_name}'")
+            if MsgtoCons_global <= 0: print(f"[SUCCESS] Group '{old_name}' renamed to '{new_name}'")
             return True
         else:
-            print(f"[ERROR] Group '{old_name}' not found.")
+            if MsgtoCons_global <= 2: print(f"[ERROR] Group '{old_name}' not found.")
             return False
             
     except Exception as e:
-        print(f"[ERROR] {e}")
+        if MsgtoCons_global <= 2: print(f"[ERROR] {e}")
         return False
     
 def compare (Filename1=None,Filename2=None):
@@ -641,11 +662,9 @@ def compare (Filename1=None,Filename2=None):
     else:
         file2_pfad = os.path.join(os.path.dirname(__file__), Filename2)
 
-    with open(file1_pfad, 'r', encoding='utf-8') as f:
-        confjson = json.load(f)
+    confjson = _read(file1_pfad)
     
-    with open(file2_pfad, 'r', encoding='utf-8') as f:
-        resetjson = json.load(f)
+    resetjson = _read(file2_pfad)
 
     if confjson == resetjson:
         return True
